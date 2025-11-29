@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-scale-lab-api
+  labels:
+    app: llm-scale-lab-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: llm-scale-lab-api
+  template:
+    metadata:
+      labels:
+        app: llm-scale-lab-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/example/llm-scale-lab-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

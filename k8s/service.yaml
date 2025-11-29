@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-scale-lab-api
+  labels:
+    app: llm-scale-lab-api
+spec:
+  selector:
+    app: llm-scale-lab-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+  type: ClusterIP

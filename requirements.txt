@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+transformers
+torch
+jax
+pytest
+pydantic
