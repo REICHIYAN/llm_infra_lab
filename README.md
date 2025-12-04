@@ -1,139 +1,145 @@
-# LLM-Infra-Lab
+# 🚀 LLM-Infra-Lab
+A minimal, reproducible LLM infrastructure stack — designed so anyone can understand the *entire LLM pipeline* in under an hour.
 
-A minimal yet realistic LLM infrastructure lab designed under the constraints:
+This project is for engineers who want to learn:
 
-- **Free to run**
-- **Verifiable on a single CPU-only laptop**
-- **Implementable in ~2 hours by a single engineer**
-- **Covers 4 key areas that Google SWE / Research Engineers care about**:
+- How fast inference engines (like vLLM) organize KV caches & batching  
+- How distributed training (FSDP, JAX pmap) is wired internally  
+- How serving layers + infra (K8s / Terraform) fit around an LLM  
+- How to test the whole thing on a *single CPU-only laptop*
 
-1. JAX / TPU / distributed training patterns (`pmap`)
-2. vLLM-style fast inference: KV cache & batching design
-3. Kubernetes / GKE + Terraform deployment skeleton
-4. FSDP-based large-model training pattern (CPU-friendly demo)
+No GPUs required. No massive models.  
+Just clean, readable, production-shaped code — the smallest possible LLM infra stack you can actually learn from.
 
-The goal is not peak performance, but **clean architecture, correctness, and easy verification**.
-Everything runs on CPU; TPU/GPU usage is optional and not required for basic checks.
+> 🧠 **If full LLM systems feel like a black box, this repo makes them transparent.**
 
 ---
 
-## Project Layout
+## ⭐ Why this exists
 
-```text
-llm_infra_lab/
-├─ README.md
-├─ requirements.txt
-├─ jax/
-│   └─ mini_pmap_train.py      # JAX + pmap mini example (CPU check + TPU-ready)
-├─ serving/
-│   ├─ __init__.py
-│   ├─ api_server.py           # FastAPI app: /health, /generate
-│   └─ vllm_mock.py            # vLLM-style KV cache & batching mock (CPU-only)
-├─ training/
-│   ├─ __init__.py
-│   └─ fsdp_minimal.py         # FSDP-style tiny training loop (CPU single-process)
-├─ tests/
-│   ├─ test_serving.py         # API tests (FastAPI TestClient)
-│   ├─ test_vllm_mock.py       # KV cache & batching behavior tests
-│   └─ test_fsdp.py            # Single-step FSDP training test
-├─ k8s/
-│   ├─ deployment.yaml         # K8s Deployment (GKE-ready, but generic)
-│   └─ service.yaml            # ClusterIP Service for the API
-├─ terraform/
-│   └─ main.tf                 # Minimal GKE cluster definition (validate-only)
-└─ scripts/
-    ├─ run_server.sh           # Start FastAPI (development use)
-    └─ run_tests.sh            # Run pytest test suite
-```
+Most LLM repos are either:
+
+- too huge to read, or  
+- too toy-like and unrealistic.
+
+This lab sits in the middle:  
+**small enough to understand structurally, but real enough to teach the architecture correctly.**
+
+You get:
+
+- A working KV-cache engine  
+- A working FastAPI inference server  
+- A working FSDP-style training step  
+- A working JAX pmap example  
+- A working K8s/Terraform infra skeleton  
+- A complete pytest suite verifying everything
+
+All runnable on **CPU only**.  
+Everything is **minimal**, but nothing is **fake**.
 
 ---
 
-## 0. Setup (CPU-only)
+# 🔥 Try it in 10 seconds (verified on Colab & CPU-only)
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install --upgrade pip
+git clone https://github.com/REICHIYAN/llm_infra_lab.git
+cd llm_infra_lab
 pip install -r requirements.txt
+PYTHONPATH=. pytest -q
 ```
 
-All dependencies are CPU-friendly: no CUDA or TPU is required.
+If you see:
+
+```
+5 passed in X.XXs
+```
+
+You now have:
+
+- working inference server  
+- working KV cache  
+- working batching  
+- working FSDP fallback  
+- working JAX pmap check  
+
+→ **The whole LLM infra stack is verified.**
 
 ---
 
-## 1. Run the API server (serving layer)
+# 🧩 What’s inside (architecture overview)
+
+```
+llm_infra_lab/
+├── serving/          # FastAPI server + vLLM-style KV cache engine
+├── training/         # FSDP-style tiny training loop (works on CPU)
+├── jax/              # pmap mini example for distributed concepts
+├── tests/            # Full pytest suite (API, KV cache, training)
+├── k8s/              # Deployment + Service (GKE-ready)
+├── terraform/        # Minimal GKE IaC skeleton (validate without apply)
+└── scripts/          # run_server.sh / run_tests.sh
+```
+
+---
+
+# ⚡ 1. Run the inference server
 
 ```bash
 ./scripts/run_server.sh
 ```
 
-Then in another terminal:
+Then hit:
 
 ```bash
 curl http://localhost:8000/health
-
-curl -X POST http://localhost:8000/generate       -H "Content-Type: application/json"       -d '{"prompt": "Hello from LLM-Infra-Lab!", "max_new_tokens": 32}'
+curl -X POST http://localhost:8000/generate      -H "Content-Type: application/json"      -d '{"prompt": "Hello!", "max_new_tokens": 32}'
 ```
 
-This exercises:
+This triggers:
 
-- `serving/api_server.py` (FastAPI)
-- `serving/vllm_mock.py` (KV cache & batching mock)
+- `serving/api_server.py`
+- `serving/vllm_mock.py` (fast path, KV reuse, batching)
 
 ---
 
-## 2. Run tests (quick verification)
+# ⚡ 2. Verify everything end-to-end (pytest)
 
 ```bash
-./scripts/run_tests.sh
-# or
-pytest -q
+PYTHONPATH=. pytest -q
 ```
 
-This validates:
+Includes tests for:
 
-- API endpoints (`/health`, `/generate`)
-- KV cache reuse and batching behavior
-- FSDP-style training step on CPU (fallback to non-FSDP if unavailable)
+- FastAPI endpoints  
+- KV cache reuse & batch scheduling  
+- FSDP-style training step  
+- CPU-only fallback logic  
 
 ---
 
-## 3. JAX / pmap mini example (CPU check)
-
-The JAX example is in `jax/mini_pmap_train.py`.
-
-On a CPU-only machine, you can run a **lightweight structural check**:
+# ⚡ 3. JAX / pmap mini example
 
 ```bash
 python jax/mini_pmap_train.py --cpu-check
 ```
 
-This confirms:
+Verifies:
 
-- JAX is installed and importable
-- `pmap` is used correctly
-- The function signatures & parallel mapping structure are valid
+- JAX import  
+- pmap usage  
+- parallel mapping structure  
 
-On Colab with TPU, you can omit `--cpu-check` and execute the full mini-training loop.
+(If TPU available → remove the flag.)
 
 ---
 
-## 4. Kubernetes / Terraform (validate-only)
-
-These files are designed to be:
-
-- **Syntactically valid**
-- **Logically minimal**
-- **Safe to inspect and validate without creating real cloud resources**
-
-If you have `kubectl` installed:
+# ⚡ 4. K8s & Terraform (infra skeleton)
 
 ```bash
 kubectl apply --dry-run=client -f k8s/deployment.yaml
 kubectl apply --dry-run=client -f k8s/service.yaml
 ```
 
-If you have `terraform` installed:
+Terraform:
 
 ```bash
 cd terraform
@@ -141,40 +147,39 @@ terraform init
 terraform validate
 ```
 
-This is sufficient for interview or review contexts to show that:
-
-- You understand basic K8s Deployment/Service structure
-- You can express infrastructure as code for a GKE cluster
-
 ---
 
-## 5. FSDP-style minimal training
+# ⚡ 5. FSDP-style tiny training loop
 
 ```bash
 python training/fsdp_minimal.py
 ```
 
-This script attempts to initialize a single-process CPU-only process group and wrap
-a tiny model in FSDP. If FSDP or distributed backends are not available in your
-PyTorch build, it will **gracefully fall back** to a non-FSDP model while keeping
-the code structure intact.
-
-The goal is to demonstrate that you:
-
-- Know how FSDP is wired conceptually
-- Can write a training step that works in both FSDP and non-FSDP modes
+Works even without FSDP support (falls back automatically).
 
 ---
 
-## Design Philosophy (for interviews)
+# 🎯 Design Principles
 
-- **CPU-first**: Everything important can be verified on a CPU-only machine.
-- **Clear separation of concerns**:
-  - `serving/`: inference API & fast-path considerations
-  - `training/`: large-model training patterns (FSDP-style)
-  - `jax/`: JAX-based research-style experimentation
-  - `k8s/`, `terraform/`: deployment & infra-as-code
-  - `tests/`: executable documentation & safety net
-- **Minimal, not trivial**: Each file is intentionally small but structurally realistic,
-  so a senior engineer can quickly assess correctness, and you can speak about it
-  clearly in an interview.
+- **CPU-first reproducibility**  
+- **Minimal, not trivial**  
+- **Production-shaped APIs**  
+- **Interview-ready structure**  
+- **Tests = executable documentation**
+
+---
+
+# 📘 Example Notebook
+
+```
+examples/LLM-Infra-Lab.ipynb
+```
+
+---
+
+# ⭐ If this repo helped you understand LLM infra, please consider starring it!
+Stars help more engineers discover clean, readable infra examples.
+
+---
+
+# 🙌 Contributions welcome
